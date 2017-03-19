@@ -28,7 +28,10 @@
         <%--<a href="bookServlet?method=forwardPage&page=cart&pageNo=${bookpage.pageNo }">查看购物车</a>--%>
     <%--</c:if>--%>
 
-    <c:if test="${sessionScope.shoppingCart.books != null}">
+
+    <c:if test="${!empty sessionScope.shoppingCart.books }">
+    <%--购物车中有${sessionScope.shoppingCart.bookNumber}本书。--%>
+        //TODO
         购物车中有${sessionScope.shoppingCart.bookNumber}本书。
         <%--<a href="bookServlet?method=forwardPage&page=cart&pageNo=${bookpage.pageNo }">查看购物车</a>--%>
         <br>

@@ -1,5 +1,6 @@
 package com.seek.bookstore.servlet;
 
+import com.google.gson.Gson;
 import com.seek.bookstore.domain.Book;
 import com.seek.bookstore.domain.ShoppingCart;
 import com.seek.bookstore.service.BookService;
@@ -14,6 +15,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Created by ${Seek} on 2017/2/23
@@ -44,11 +47,89 @@ public class BookServlet extends HttpServlet {
 		}
 	}
 
+	protected void updateItemQuantity(HttpServletRequest req, HttpServletResponse resp)
+			throws ServletException, IOException {
+		//4. 在 updateItemQuantity 方法中, 获取 quantity, id, 再获取购物车对象, 调用 service 的方法做修改
+		String idStr = req.getParameter("id");
+		String quantityStr = req.getParameter("quantity");
+
+		ShoppingCart shoppingCart = BookStoreWebUtils.getShoppingCart(req);
+
+		int id = -1;
+		int quantity = -1;
+
+		try {
+			id = Integer.parseInt(idStr);
+			quantity = Integer.parseInt(quantityStr);
+		} catch (NumberFormatException e) {}
+
+		if (id > 0 && quantity > 0) {
+			bookService.updateItemQuantity(shoppingCart, id, quantity);
+		}
+
+		//5. 传回 JSON 数据: bookNumber:xx, totalMoney
+		Map<String, Object> resultMap = new HashMap<String, Object>();
+		resultMap.put("bookNumber", shoppingCart.getBookNumber());
+		resultMap.put("totalMoney", shoppingCart.getTotalMoney());
+
+		Gson gson = new Gson();
+		String jsonStr = gson.toJson(resultMap);
+		resp.setContentType("text/javascript");
+		resp.getWriter().print(jsonStr);
+
+	}
+
+	/**
+	 * 删除购物车内的一条记录
+	 * @param req
+	 * @param resp
+	 * @throws ServletException
+	 * @throws IOException
+	 */
+	protected void remove(HttpServletRequest req, HttpServletResponse resp)
+			throws ServletException, IOException {
+		String idStr = req.getParameter("id");
+
+		int id = -1;
+
+		id = Integer.parseInt(idStr);
+		ShoppingCart shoppingCart = BookStoreWebUtils.getShoppingCart(req);
+		bookService.removeItemFromShoppingCart(shoppingCart, id);
+
+		if (shoppingCart.isEmpty()) {
+			req.getRequestDispatcher("WEB-INF/pages/emptycart.jsp").forward(req, resp);
+			return;
+		}
+
+		req.getRequestDispatcher("WEB-INF/pages/cart.jsp").forward(req, resp);
+
+	}
+
+	/**
+	 * 清空购物车
+	 * @param req
+	 * @param resp
+	 * @throws ServletException
+	 * @throws IOException
+	 */
+	public void clearShoppingCart(HttpServletRequest req, HttpServletResponse resp)
+			throws ServletException, IOException {
+		ShoppingCart shoppingCart = BookStoreWebUtils.getShoppingCart(req);
+
+		bookService.clearShopping(shoppingCart);
+		req.getRequestDispatcher("WEB-INF/pages/emptycart.jsp").forward(req, resp);
+	}
+
+	/**
+	 * 去购物车页面
+	 * @param req
+	 * @param resp
+	 * @throws ServletException
+	 * @throws IOException
+	 */
 	protected void toCartPage(HttpServletRequest req, HttpServletResponse resp)
 			throws ServletException, IOException {
 
-		//System.out.println("Hello111");
-		System.out.println("111111111");
 		req.getRequestDispatcher("WEB-INF/pages/cart.jsp").forward(req, resp);
 	}
 
@@ -157,6 +238,7 @@ public class BookServlet extends HttpServlet {
 		CriteriaBook criteriaBook = new CriteriaBook(minPrice, maxPrice, pageNo);
 		Page<Book> bookPage = bookService.getPage(criteriaBook);
 		request.setAttribute("bookPage", bookPage);
+		//TODO 因为使用请求的转发，导致每刷新一次购物车数量加1 ，重复提交。
 		request.getRequestDispatcher("/WEB-INF/pages/books.jsp").forward(request, response);
 	}
 }
